@@ -145,7 +145,9 @@ class RNNLM(object):
         """
         # Input ids, with dynamic shape depending on input.
         # Should be shape [batch_size, max_time] and contain integer word indices.
-        self.input_w_ = tf.placeholder(tf.int32, [None, None], name="w")
+        # we have one for each question
+        self.input_w_q1_ = tf.placeholder(tf.int32, [None, None], name="w")
+        self.input_w_q2_ = tf.placeholder(tf.int32, [None, None], name="w")
 
         # Initial hidden state. Overwritten once RNN cell is constructed
         self.initial_h_ = None
@@ -166,11 +168,21 @@ class RNNLM(object):
         self.loss_ = None
 
         # Get dynamic shape info from inputs
+        
+        # need to use max of batch size and max_time for both questions in embedding layer
         with tf.name_scope("batch_size"):
-            self.batch_size_ = tf.shape(self.input_w_)[0]
+            self.batch_size_ = tf.shape(self.input_w_q1_)[0]
+            # for now using one of them as batch size and max_time, until I figure out how to compare
+            # if tf.shape(self.input_w_q1_)[0] > tf.shape(self.input_w_q2_)[0]:
+            #    self.batch_size_ = tf.shape(self.input_w_q1_)[0]
+            #else:
+            #    self.batch_size_ = tf.shape(self.input_w_q2_)[0]
+            #self.batch_size_ = max(tf.shape(self.input_w_q1_)[0], tf.shape(self.input_w_q2_)[0] )
         with tf.name_scope("max_time"):
-            self.max_time_ = tf.shape(self.input_w_)[1]
+        #    self.max_time_ = max(tf.shape(self.input_w_q1_)[1], tf.shape(self.input_w_q2_)[1])
+            self.max_time_ = tf.shape(self.input_w_q1_)[1]
 
+            
         # Get sequence length from input_w_.
         # TL;DR: pass this to dynamic_rnn.
         # This will be a vector with elements ns[i] = len(input_w_[i])
@@ -178,6 +190,7 @@ class RNNLM(object):
         # sequences in the same batch, although you shouldn't need to for this
         # assignment.
         self.ns_ = tf.tile([self.max_time_], [self.batch_size_, ], name="ns")
+        
 
         
         # print(self.V)
@@ -188,7 +201,8 @@ class RNNLM(object):
             # embedding_lookup gives shape (batch_size, max_time, H)
             
             self.W_in_ = tf.Variable(tf.random_uniform([self.V, self.H], -1.0, 1.0), name="embedding")
-            self.embedded_layer_ = tf.nn.embedding_lookup(self.W_in_, self.input_w_)
+            self.embedded_layer_q1_ = tf.nn.embedding_lookup(self.W_in_, self.input_w_q1_)
+            self.embedded_layer_q2_ = tf.nn.embedding_lookup(self.W_in_, self.input_w_q2_)
             
             # print("W_in_ shape: ", self.W_in_.shape)
             # print("self.embedded_layer: ", self.embedded_layer_)
@@ -209,8 +223,16 @@ class RNNLM(object):
         
         
         # include initial state in the call to dynamic_rnn
+        # sending to inputs
+        # notes from TF website:
+        
+        # Inputs may be a single Tensor where the maximum time is either the first or second dimension (see the parameter time_major).
+        # Alternatively, it may be a (possibly nested) tuple of Tensors, each of them having matching batch and time dimensions.
+        # The corresponding output is either a single Tensor having the same number of time steps and batch size, or a (possibly nested)
+        # tuple of such tensors, matching the nested structure of cell.output_size.
+        
         self.outputs_, self.last_states_ = tf.nn.dynamic_rnn(cell = self.cell_, initial_state = self.initial_h_,
-                                                 sequence_length = self.ns_, inputs = self.embedded_layer_)
+                                                 sequence_length = self.ns_, inputs = (self.embedded_layer_q1_, self.embedded_layer_q2_))
 
         
         self.final_h_ = self.last_states_

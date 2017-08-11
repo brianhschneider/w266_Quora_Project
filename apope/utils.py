@@ -185,8 +185,17 @@ def sents_to_tokens(sents, vocab):
 
 def build_vocab(questions, V=10000):
     #token_feed = (canonicalize_word(w) for w in sentence.split() for sentence in questions)
-    token_feed = (canonicalize_word(w) for sentence in questions for w in sentence.split())
+    #token_feed = (canonicalize_word(w) for sentence in questions for w in sentence.split())
+    #print (token_feed)
+    token_feed = []
+    for sentence in questions:
+        for w in sentence.split():
+            token_feed.append(canonicalize_word(w))
+    token_feed = set(token_feed)
+    
     vocab = vocabulary.Vocabulary(token_feed, size=V)
+    
+    return vocab
     
 
 def get_train_test_sents(corpus, split=0.8, shuffle=True):
@@ -235,8 +244,10 @@ def preprocess_sentences(sentences, vocab):
     # Add sentence boundaries, canonicalize, and handle unknowns
     #words = flatten(["<s>"] + s + ["</s>"] for s in sentences)
     words = ["<s>" + s + "</s>" for s in sentences]
-    words = [canonicalize_word(w, wordset=vocab.word_to_id)
-             for w in words]
+    # print (words[0:5])
+    words = [canonicalize_word(w, wordset=vocab.word_to_id) for w in words]
+
+     
     return np.array(vocab.words_to_ids(words))
 
 ##
