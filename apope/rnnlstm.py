@@ -146,8 +146,8 @@ class RNNLM(object):
         # Input ids, with dynamic shape depending on input.
         # Should be shape [batch_size, max_time] and contain integer word indices.
         # we have one for each question
-        self.input_w_q1_ = tf.placeholder(tf.int32, [None, None], name="w")
-        self.input_w_q2_ = tf.placeholder(tf.int32, [None, None], name="w")
+        self.input_w_q1_ = tf.placeholder(tf.int32, [None, None], name="w1")
+        self.input_w_q2_ = tf.placeholder(tf.int32, [None, None], name="w2")
 
         # Initial hidden state. Overwritten once RNN cell is constructed
         self.initial_h_ = None
@@ -171,7 +171,7 @@ class RNNLM(object):
         
         # need to use max of batch size and max_time for both questions in embedding layer
         with tf.name_scope("batch_size"):
-            self.batch_size_ = tf.shape(self.input_w_q1_)[0]
+            self.batch_size_ = 50
             # for now using one of them as batch size and max_time, until I figure out how to compare
             # if tf.shape(self.input_w_q1_)[0] > tf.shape(self.input_w_q2_)[0]:
             #    self.batch_size_ = tf.shape(self.input_w_q1_)[0]
@@ -179,8 +179,8 @@ class RNNLM(object):
             #    self.batch_size_ = tf.shape(self.input_w_q2_)[0]
             #self.batch_size_ = max(tf.shape(self.input_w_q1_)[0], tf.shape(self.input_w_q2_)[0] )
         with tf.name_scope("max_time"):
-        #    self.max_time_ = max(tf.shape(self.input_w_q1_)[1], tf.shape(self.input_w_q2_)[1])
-            self.max_time_ = tf.shape(self.input_w_q1_)[1]
+        #    self.max_time_ = max(tf.shape(self.input_w_q1_)[1], tf.shape(self.input_w_q2_)[1] 
+            self.max_time_ = 20
 
             
         # Get sequence length from input_w_.
@@ -232,7 +232,7 @@ class RNNLM(object):
         # tuple of such tensors, matching the nested structure of cell.output_size.
         
         self.outputs_, self.last_states_ = tf.nn.dynamic_rnn(cell = self.cell_, initial_state = self.initial_h_,
-                                                 sequence_length = self.ns_, inputs = (self.embedded_layer_q1_, self.embedded_layer_q2_))
+                                                 sequence_length = self.ns_, inputs = self.embedded_layer_q1_ + self.embedded_layer_q2_)
 
         
         self.final_h_ = self.last_states_

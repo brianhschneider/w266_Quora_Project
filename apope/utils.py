@@ -45,15 +45,25 @@ def canonicalize_digits(word):
     return word
 
 def canonicalize_word(word, wordset=None, digits=True):
+    #print ("cw word: ", word)
+    #print("cw wordset: ", wordset)
+    
     word = word.lower()
+    
     if digits:
         if (wordset != None) and (word in wordset): return word
         word = canonicalize_digits(word) # try to canonicalize numbers
     if (wordset == None) or (word in wordset): return word
     else: return "<unk>" # unknown token
 
-def canonicalize_words(words, **kw):
-    return [canonicalize_word(word, **kw) for word in words]
+def canonicalize_words(words, wordset, digits=True):
+    #print ("cws wordset: ", wordset)
+    return [canonicalize_word(word, wordset, digits) for word in words]
+
+'''
+def canonicalize_words(words, wordset=None, digits = True):
+    return [canonicalize_word(word, wordset, digits) for word in words]
+'''
 
 
 
@@ -138,12 +148,14 @@ def pretty_timedelta(fmt="%d:%02d:%02d", since=None, until=None):
 
 ##
 # Word processing functions
+'''
 def canonicalize_digits(word):
     if any([c.isalpha() for c in word]): return word
     word = re.sub("\d", "DG", word)
     if word.startswith("DG"):
         word = word.replace(",", "") # remove thousands separator
     return word
+
 
 def canonicalize_word(word, wordset=None, digits=True):
     word = word.lower()
@@ -155,7 +167,7 @@ def canonicalize_word(word, wordset=None, digits=True):
 
 def canonicalize_words(words, **kw):
     return [canonicalize_word(word, **kw) for word in words]
-
+'''
 
 ##
 # Data loading functions
@@ -244,11 +256,35 @@ def preprocess_sentences(sentences, vocab):
     # Add sentence boundaries, canonicalize, and handle unknowns
     #words = flatten(["<s>"] + s + ["</s>"] for s in sentences)
     words = ["<s>" + s + "</s>" for s in sentences]
-    # print (words[0:5])
-    words = [canonicalize_word(w, wordset=vocab.word_to_id) for w in words]
+    print (words[0:5])
+    wordset =  vocab.word_to_id
+    # print (wordset)
+    # confirmed populated
+    
+    words = [canonicalize_words(w, wordset=wordset) for w in words]
+    # print (type(words))
+    print (words[0:5])
+    #words = ''.join(words_tmp)
+    #print (type(words))
+    '''
+    tmp=[]
+    
+    #print("wordset: ", wordset)
+    for w in words:
+        #print (w)
+        sents = canonicalize_words(w, wordset = wordset)
+        #print (sents)
+        tmp.append(sents)
+    
+    words = tmp
 
-     
-    return np.array(vocab.words_to_ids(words))
+    ''' 
+    # print (words)
+    #tmp = vocab.words_to_ids(words)
+    #print (type(tmp))
+    #return np.array(vocab.words_to_ids(words))
+    #return tmp
+    return words
 
 ##
 # Use this function
@@ -262,20 +298,34 @@ def load_corpus(name, split=0.8, V=10000, shuffle=0):
     return vocab, train_ids, test_ids
 
 ##
-# Use this function
-def batch_generator(ids, batch_size, max_time):
+def batch_generator(q1_sequences, q2_sequences, y_train, batch_size, max_time):
     """Convert ids to data-matrix form."""
     # Clip to multiple of max_time for convenience
-    clip_len = ((len(ids)-1) / batch_size) * batch_size
-    input_w = ids[:clip_len]     # current word
-    target_y = ids[1:clip_len+1]  # next word
+    #print ("len(q1_sequences): ", len(q1_sequences))
+    #print ("len(y_train): ", len(y_train))
+    #clip_len_q1 = int(((len(q1_sequences)-1) / batch_size) * batch_size)
+    #print(type(q1_sequences))
+    #print(type(y_train))
+    clip_len_q1 = int(((len(q1_sequences) / batch_size)-1) * batch_size)
+    #print ("clip_len_q1: ", clip_len_q1)
+    input_w_q1 = q1_sequences[:clip_len_q1]     # current word
+    
+    clip_len_q2 = int(((len(q2_sequences) / batch_size)-1) * batch_size)
+    input_w_q2 = q2_sequences[:clip_len_q2]     # current word
+    
+    
+    # what is the proper size...should it come togeth
+    #target_y = q1_sequences[1:clip_len_q1+1] + q2_sequences[1:clip_len_q2+1]  # next word
+    clip_len_y = int(((len(y_train) / batch_size)-1) * batch_size)
+    target_y = y_train[1:clip_len_y+1]  # is duplicate
+    
     # Reshape so we can select columns
-    input_w = input_w.reshape([batch_size,-1])
+    #print ("input_w_q1: ", input_w_q1)
+    input_w_q1 = input_w_q1.reshape([batch_size,-1])
+    input_w_q2 = input_w_q2.reshape([batch_size,-1])
     target_y = target_y.reshape([batch_size,-1])
 
+
     # Yield batches
-    for i in xrange(0, input_w.shape[1], max_time):
-        yield input_w[:,i:i+max_time], target_y[:,i:i+max_time]
-
-
-
+    for i in range(0, input_w_q1.shape[1], max_time):
+        yield input_w_q1[:,i:i+max_time], input_w_q2[:,i:i+max_time], target_y[:,i:i+max_time]
