@@ -149,6 +149,8 @@ class RNNLM(object):
         self.input_w_q1_ = tf.placeholder(tf.int32, [None, None], name="w1")
         self.input_w_q2_ = tf.placeholder(tf.int32, [None, None], name="w2")
 
+        
+        
         # Initial hidden state. Overwritten once RNN cell is constructed
         self.initial_h_ = None
 
