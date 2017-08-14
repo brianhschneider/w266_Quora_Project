@@ -59,7 +59,8 @@ class HMM(object):
         return self._initial.get(tag, -np.inf)
 
     def emission(self, tag, word):
-        return self._emission.get(tag, {}).get(word, -np.inf)
+        #return self._emission.get(tag, {}).get(word, -np.inf)
+        return self._emission.get(tag, {}).get(word, np.log(1/100000))
 
     def transition(self, tag_1, tag_2):
         return self._transition.get(tag_1, {}).get(tag_2, -np.inf)
@@ -249,7 +250,7 @@ class HMM(object):
             else: 
                 for t_1 in self.tagset:
                     max_term = float('-inf')
-                    max_tag = None
+                    max_tag = 'NNP'
                     for t in self.tagset:
                         term = self.transition(t, t_1) + delta[(i - 1, t)]
                         if term > max_term:
@@ -286,7 +287,10 @@ class HMM(object):
         # Follow backpointers to obtain sequence with the highest score.
         tags = [end_tag]
         for i in reversed(range(0, n-1)):
-            tags.append(bp[(i + 1,tags[-1])])
+            if (i+1, tags[-1]) not in bp:
+                tags.append(None)
+            else:
+                tags.append(bp[(i + 1,tags[-1])])
         tags = list(reversed(tags))
 
         return (tags, delta, bp) if return_tables else tags
